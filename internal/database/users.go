@@ -1,8 +1,6 @@
 package database
 
 import (
-	"log"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,7 +19,6 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 	id := len(dbStructure.Users) + 1
 
 	generatePassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	log.Printf("password %s", generatePassword)
 
 	if err != nil {
 		return User{}, err
