@@ -8,6 +8,7 @@ type User struct {
 	ID             int    `json:"id"`
 	Email          string `json:"email"`
 	HashedPassword string `json:"hashed_password"`
+	IsChirpyRed    bool   `json:"is_chirpy_red"`
 }
 
 func (db *DB) CreateUser(email string, password string) (User, error) {
@@ -28,6 +29,7 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 		ID:             id,
 		Email:          email,
 		HashedPassword: string(generatePassword),
+		IsChirpyRed:    false,
 	}
 
 	dbStructure.Users[id] = user
@@ -37,7 +39,7 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 		return User{}, nil
 	}
 
-	return User{user.ID, user.Email, ""}, nil
+	return User{user.ID, user.Email, "", user.IsChirpyRed}, nil
 }
 
 func (db *DB) GetUser(id int) (User, error) {
@@ -100,6 +102,28 @@ func (db *DB) UpdateUser(id int, email, hashedPassword string) (User, error) {
 	dbStructure.Users[id] = user
 
 	err = db.writeDB(dbStructure)
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}
+
+func (db *DB) UpgradeChirpyRed(id int) (User, error) {
+	dbStucture, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	user, ok := dbStucture.Users[id]
+	if !ok {
+		return User{}, ErrNotExist
+	}
+
+	user.IsChirpyRed = true
+	dbStucture.Users[id] = user
+
+	err = db.writeDB(dbStucture)
 	if err != nil {
 		return User{}, err
 	}
