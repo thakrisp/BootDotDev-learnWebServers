@@ -4,6 +4,14 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
+)
+
+type sortOrder string
+
+const (
+	sortASC  sortOrder = "asc"
+	sortDESC sortOrder = "desc"
 )
 
 func (cfg *apiConfig) handlerChirpsGet(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +41,13 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	sortOrderQuery := strings.ToLower(r.URL.Query().Get("sort"))
+
+	if sortOrderQuery != string(sortASC) && sortOrderQuery != string(sortDESC) {
+		respondWithError(w, http.StatusBadRequest, "bad sort order request")
+		return
+	}
+
 	authorID := -1
 	authorIDString := r.URL.Query().Get("author_id")
 	if authorIDString != "" {
@@ -56,9 +71,15 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 		})
 	}
 
-	sort.Slice(chirps, func(i, j int) bool {
-		return chirps[i].ID < chirps[j].ID
-	})
+	if sortOrderQuery == string(sortDESC) {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].ID > chirps[j].ID
+		})
+	} else {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].ID < chirps[j].ID
+		})
+	}
 
 	respondWithJSON(w, http.StatusOK, chirps)
 }
