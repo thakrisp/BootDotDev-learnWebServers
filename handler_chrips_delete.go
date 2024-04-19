@@ -7,40 +7,47 @@ import (
 	"thakrisp.com/goServer/internal/auth"
 )
 
-func (cfg *apiConfig) handlerDeleteChrip(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerChirpsDelete(w http.ResponseWriter, r *http.Request) {
+	chirpIDString := r.PathValue("chirpID")
+	chirpID, err := strconv.Atoi(chirpIDString)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Invlaid chirp ID")
+		return
+	}
+
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't find token")
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find JWT")
 		return
 	}
 
 	subject, err := auth.ValidateJWT(token, cfg.jwtSecret)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't validate token")
+		respondWithError(w, http.StatusUnauthorized, "Couldn't validate JWT")
 		return
 	}
 
-	chirpIDString := r.PathValue("chirpID")
-	chirpIDInt, err := strconv.Atoi(chirpIDString)
+	userID, err := strconv.Atoi(subject)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't parse user chirp id")
+		respondWithError(w, http.StatusInternalServerError, "Couldn't parse user ID")
 		return
 	}
 
-	subjectInt, err := strconv.Atoi(subject)
+	dbChirp, err := cfg.DB.GetChirp(chirpID)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't parse user id")
+		respondWithError(w, http.StatusNotFound, "Couldn't get chirp")
+	}
+
+	if dbChirp.AuthorID != userID {
+		respondWithError(w, http.StatusForbidden, "You can't delete this chirp")
 		return
 	}
 
-	chirpDeleted, err := cfg.DB.DeleteChirp(chirpIDInt, subjectInt)
+	err = cfg.DB.DeleteChirp(chirpID)
 	if err != nil {
-		respondWithError(w, http.StatusForbidden, "Authenticated user doesn't match chrip author")
+		respondWithError(w, http.StatusInternalServerError, "Couldn't delete chirp")
 		return
 	}
-	if !chirpDeleted {
-		respondWithError(w, http.StatusBadRequest, "Couldn't find a chirp with that ID")
-	}
 
-	respondWithJSON(w, http.StatusOK, "")
+	respondWithJSON(w, http.StatusOK, struct{}{})
 }

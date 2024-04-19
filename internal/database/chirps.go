@@ -1,7 +1,5 @@
 package database
 
-import "errors"
-
 type Chirp struct {
 	ID       int    `json:"id"`
 	Body     string `json:"body"`
@@ -60,30 +58,16 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 	return chirp, nil
 }
 
-func (db *DB) DeleteChirp(chirpID, userID int) (bool, error) {
+func (db *DB) DeleteChirp(id int) error {
 	dbStructure, err := db.loadDB()
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	chrips := dbStructure.Chirps
-
-	chirp, ok := chrips[chirpID]
-	if !ok {
-		return false, nil
-	}
-
-	if chirp.AuthorID != userID {
-		return false, errors.New("chirp ID doesnt match user ID")
-	}
-
-	delete(chrips, chirpID)
-	dbStructure.Chirps = chrips
-
+	delete(dbStructure.Chirps, id)
 	err = db.writeDB(dbStructure)
 	if err != nil {
-		return false, errors.New("couldn't write to DB")
+		return err
 	}
-
-	return true, nil
+	return nil
 }
